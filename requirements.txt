@@ -1,0 +1,2 @@
+aiogram == 2.21
+aioredis ==  2.0.1

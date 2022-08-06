@@ -1,13 +1,8 @@
-import asyncio
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
+import logging
+from aiogram import executor
 
-from config import TOKEN
+from loader import bot, dp, storage
 
-loop = asyncio.new_event_loop()
-bot = Bot(token=TOKEN, parse_mode="HTML")
-storage = MemoryStorage()
-dp = Dispatcher(bot, loop=loop, storage=storage)
 
 async def close(dp):
 	await storage.close()
@@ -15,4 +10,5 @@ async def close(dp):
 
 if __name__ == '__main__':
 	from handlers import dp
+	logging.basicConfig(level=logging.DEBUG)
 	executor.start_polling(dp, on_shutdown=close)
