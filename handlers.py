@@ -22,8 +22,20 @@ async def start(message: Message, state: FSMContext):
 @dp.message_handler(Command('find'), state=Stack.finish)
 async def find_vacancy(message: Message, state: FSMContext):
 	data = await state.get_data()
-	result = get_vacancy_message_text(data)
-	await message.answer(str(result))
+	try:
+		result = data['vacancies']
+	except KeyError:
+		result = get_vacancy_message_text(data)
+	
+	if len(result) == 0:
+		await message.answer("Подходящих вакансий нет")
+	else:
+		await state.update_data(
+			{'vacancies': len(result) - 1}
+		)
+		await message.answer(result[len(result) - 1])
+		if len(result) - 1 < 0:
+			await message.answer("Больше вакансий по данным параметрам нет")
 
 @dp.message_handler(Command('find'), state=None)
 async def send_to_stack_filling(message: Message):
@@ -62,8 +74,6 @@ async def technologies(message: Message, state: FSMContext):
 	old_technologies += new_technologies
 	await state.update_data({"technologies": ", ".join(old_technologies)})
 	await message.answer("Уровень", reply_markup=lvl_keyboard)
-	new_data = await state.get_data()
-	print(new_data['technologies'])
 	await Stack.next()
 
 @dp.message_handler(state=Stack.lvl)
@@ -143,3 +153,4 @@ async def final(message: Message, state: FSMContext):
     
 
 # TODO: Показ нынешнего стека и замена одного на другой
+@dp.message_handler()
