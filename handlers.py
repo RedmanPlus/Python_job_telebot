@@ -153,4 +153,15 @@ async def final(message: Message, state: FSMContext):
     
 
 # TODO: Показ нынешнего стека и замена одного на другой
-@dp.message_handler()
+@dp.message_handler(Command('show-stack'))
+async def show_stack(message: Message, state: FSMContext):
+	data = await state.get_data()
+	msg = f"""
+Язык: {data['technologies'][0]}
+Уровень: {data['skill']}
+Технологии: {data['technologies'][1:]}
+Локация: {data['location']}
+ЗП: {data['min_salary']} - {data['max_salary']}
+	"""
+
+	await message.answer(msg)
