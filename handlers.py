@@ -1,10 +1,11 @@
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text, Command
-
+from aiogram_dialog import DialogManager
 from loader import dp
 from keyboard import lang_keyboard, lvl_keyboard, binary_keyboard
 from stack import Stack
+from states import DialogState
 from utils import get_vacancy_message_text
 
 @dp.message_handler(commands=["reset"])
@@ -27,14 +28,15 @@ async def find_vacancy(message: Message, state: FSMContext):
 	except KeyError:
 		result = get_vacancy_message_text(data)
 	
-	if len(result) == 0:
+	print(type(result))
+	if not result:
 		await message.answer("Подходящих вакансий нет")
 	else:
 		await state.update_data(
-			{'vacancies': len(result) - 1}
+			{'vacancies': result[:len(result) - 1]}
 		)
 		await message.answer(result[len(result) - 1])
-		if len(result) - 1 < 0:
+		if len(result) - 1 <= 0:
 			await message.answer("Больше вакансий по данным параметрам нет")
 
 @dp.message_handler(Command('find'), state=None)
@@ -43,11 +45,13 @@ async def send_to_stack_filling(message: Message):
 
 # Сборка стека для поиска вакансий
 
-@dp.message_handler(Command('stack'), state=None)
-async def language(message: Message):
-	await message.answer("Язык", reply_markup=lang_keyboard)
 
-	await Stack.language.set()
+@dp.message_handler(commands=['stack'], state=None)
+async def language(message: Message, dialog_manager: DialogManager):
+	await dialog_manager.start(DialogState.choosing_technology)
+	"""await message.answer("Язык", reply_markup=lang_keyboard)
+
+	await Stack.language.set()"""
 
 @dp.message_handler(Command('stack'), state=Stack.finish)
 async def language_restart(message: Message, state: FSMContext):
@@ -128,32 +132,37 @@ async def min_salary(message: Message, state: FSMContext):
 
 @dp.message_handler(state=Stack.min_salary)
 async def max_salary(message: Message, state: FSMContext):
-	min_s = int(message.text)
-	await state.update_data(
-			{'min_salary': min_s}
-		)
+	try:
+		min_s = int(message.text)
+		await state.update_data(
+				{'min_salary': min_s}
+			)
 
-	await message.answer("Максимальная зарплата")
-	await Stack.next()
+		await message.answer("Максимальная зарплата")
+		await Stack.next()
+	except ValueError:
+		await message.answer("Недопустимое значение")
 
 @dp.message_handler(state=Stack.max_salary)
 async def final(message: Message, state: FSMContext):
-	max_s = int(message.text)
-	await state.update_data(
-			{'max_salary': max_s}
-		)
+	try:
+		max_s = int(message.text)
+		await state.update_data(
+				{'max_salary': max_s}
+			)
 
-	data = await state.get_data()
+		data = await state.get_data()
 
-	print(data)
+		print(data)
 
-	await message.answer("Записали")
-	await Stack.next()
-
+		await message.answer("Записали")
+		await Stack.next()
+	except ValueError:
+		await message.answer("Недопустимое значение")
     
 
 # TODO: Показ нынешнего стека и замена одного на другой
-@dp.message_handler(Command('show-stack'))
+@dp.message_handler(Command('showstack'))
 async def show_stack(message: Message, state: FSMContext):
 	data = await state.get_data()
 	msg = f"""
