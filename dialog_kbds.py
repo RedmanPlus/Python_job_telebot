@@ -2,7 +2,7 @@ import operator
 import requests
 from aiogram_dialog import Window, Dialog, DialogManager
 from aiogram.types import CallbackQuery
-from aiogram_dialog.widgets.kbd import Radio, Button, Group, Multiselect, Back
+from aiogram_dialog.widgets.kbd import Radio, Button, Group, Multiselect, Back, Row
 from aiogram_dialog.widgets.text import Format, Const
 from states import DialogState, Stack
 from utils import cancel
@@ -58,5 +58,17 @@ technology_keyboard = Window(Const("Выбери технологии:"),
                           default_nav,
                           getter=get_technology,
                           state=DialogState.choosing_technology)
+
+level_keyboard = Window(Const("Выбери уровень:"),
+                        Group(
+                            Row(
+                                Button(Const("Intern"), id='Intern'),
+                                Button(Const("Junior"), id='Junior') 
+                        ), Row(
+                            Button(Const("Middle"), id='Middle'),
+                            Button(Const("Senior"), id='Senior')
+                        )
+                    )
+                )
 
 dialog = Dialog(technology_keyboard, )

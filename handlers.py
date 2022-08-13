@@ -7,6 +7,7 @@ from keyboard import lang_keyboard, lvl_keyboard, binary_keyboard
 from stack import Stack
 from states import DialogState
 from utils import get_vacancy_message_text
+from dialog_kbds import selected_tech
 
 @dp.message_handler(commands=["reset"])
 async def reset_state(message: Message, state: FSMContext):
@@ -54,31 +55,10 @@ async def language(message: Message, dialog_manager: DialogManager):
 	await Stack.language.set()"""
 
 @dp.message_handler(Command('stack'), state=Stack.finish)
-async def language_restart(message: Message, state: FSMContext):
+async def language_restart(message: Message, state: FSMContext, dialog_manager: DialogManager):
 	await state.finish()
-	await message.answer("Язык", reply_markup=lang_keyboard)
-
-	await Stack.language.set()
-
-@dp.message_handler(state=Stack.language)
-async def level(message: Message, state: FSMContext):
-	lang = message.text
-	await state.update_data(
-			{'technologies': [lang]}
-		)
-
-	await message.answer("Технологии", reply_markup=ReplyKeyboardRemove())
-	await Stack.next()
-
-@dp.message_handler(state=Stack.technologies)
-async def technologies(message: Message, state: FSMContext):
-	new_technologies = message.text.split(', ')
-	data = await state.get_data()
-	old_technologies = data['technologies']
-	old_technologies += new_technologies
-	await state.update_data({"technologies": ", ".join(old_technologies)})
-	await message.answer("Уровень", reply_markup=lvl_keyboard)
-	await Stack.next()
+	
+	await dialog_manager.start(DialogState.choosing_technology)
 
 @dp.message_handler(state=Stack.lvl)
 async def location(message: Message, state: FSMContext):
@@ -162,13 +142,14 @@ async def final(message: Message, state: FSMContext):
     
 
 # TODO: Показ нынешнего стека и замена одного на другой
-@dp.message_handler(Command('showstack'))
+@dp.message_handler(Command('showstack'), state=Stack.finish)
 async def show_stack(message: Message, state: FSMContext):
 	data = await state.get_data()
+	print(data)
 	msg = f"""
-Язык: {data['technologies'][0]}
+Язык: {data['technology'][0]}
 Уровень: {data['skill']}
-Технологии: {data['technologies'][1:]}
+Технологии: {data['technology'][1:]}
 Локация: {data['location']}
 ЗП: {data['min_salary']} - {data['max_salary']}
 	"""
