@@ -5,11 +5,13 @@ from aiogram_dialog.widgets.kbd import Button
 
 def get_vacancies_json(params: dict):
     params['limit'] = 500
+    print(f"params: {params}")
     response = requests.get("https://devseye.ru/api/vacancy", params=params)
     return response.json()
 
 def get_vacancy_message_text(params: dict) -> str:
     response = get_vacancies_json(params)
+    print(response)
     print(f"Launching get_vacancy_message_text with params {params}")
     vacancies = response['results']
     return_lst = [f"""

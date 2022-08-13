@@ -7,7 +7,6 @@ from keyboard import lang_keyboard, lvl_keyboard, binary_keyboard
 from stack import Stack
 from states import DialogState
 from utils import get_vacancy_message_text
-from dialog_kbds import selected_tech
 
 @dp.message_handler(commands=["reset"])
 async def reset_state(message: Message, state: FSMContext):
@@ -49,7 +48,7 @@ async def send_to_stack_filling(message: Message):
 
 @dp.message_handler(commands=['stack'], state=None)
 async def language(message: Message, dialog_manager: DialogManager):
-	await dialog_manager.start(DialogState.choosing_technology)
+	await dialog_manager.start(DialogState.select_technology)
 	"""await message.answer("Язык", reply_markup=lang_keyboard)
 
 	await Stack.language.set()"""
@@ -58,7 +57,7 @@ async def language(message: Message, dialog_manager: DialogManager):
 async def language_restart(message: Message, state: FSMContext, dialog_manager: DialogManager):
 	await state.finish()
 	
-	await dialog_manager.start(DialogState.choosing_technology)
+	await dialog_manager.start(DialogState.select_technology)
 
 @dp.message_handler(state=Stack.lvl)
 async def location(message: Message, state: FSMContext):
@@ -135,7 +134,7 @@ async def final(message: Message, state: FSMContext):
 
 		print(data)
 
-		await message.answer("Записали")
+		await message.answer(f"{data}")
 		await Stack.next()
 	except ValueError:
 		await message.answer("Недопустимое значение")
@@ -147,10 +146,8 @@ async def show_stack(message: Message, state: FSMContext):
 	data = await state.get_data()
 	print(data)
 	msg = f"""
-Язык: {data['technology'][0]}
 Уровень: {data['skill']}
-Технологии: {data['technology'][1:]}
-Локация: {data['location']}
+Технологии: {data['technology']}
 ЗП: {data['min_salary']} - {data['max_salary']}
 	"""
 

@@ -12,5 +12,8 @@ class Stack(StatesGroup):
 	finish = State()
 
 class DialogState(StatesGroup):
-	choosing_technology = State()
-	technology_chosen = State()
+	select_technology = State()
+	select_lvl = State()
+	select_remote = State()
+	select_relocation = State()
+	select_currency = State()
