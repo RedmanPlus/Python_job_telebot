@@ -4,16 +4,24 @@ from aiogram_dialog import Window, Dialog, DialogManager
 from aiogram.types import CallbackQuery
 from aiogram_dialog.widgets.kbd import Radio, Button, Group, Multiselect, Back, Next ,Row
 from aiogram_dialog.widgets.text import Format, Const
-from states import DialogState, Stack
-from keyboard import skip_salary_kbd
-from utils import cancel
-from filters import is_button_selected
+from states import DialogState, PostDialogState, SearchVacancyState
+from utils import cancel, get_vacancy_message_text
 
 cancel_button = Button(Const("❌ Отмена"), id='cancel', on_click=cancel)
 back_button = Back(Const("⬅ Назад"))
-#back_to_start_button = Button(Const("⬅ Назад"), id='back_to_start', on_click=erase_widget_data)
 continue_button = Const("Продолжить ➡")
 default_nav = Group(back_button, cancel_button, width=2)
+
+def is_button_selected(key: str = None):
+    def wrapper(async_func):
+        async def _wrapper(c: CallbackQuery, b: Button, d: DialogManager):
+            if key in d.data['aiogd_context'].widget_data.keys():
+                print("DECORATOR")
+                await async_func(c, b, d)
+            else:
+                await c.answer("Сначала нужно выбрать хотя бы одну из опций")
+        return _wrapper
+    return wrapper
 
 async def get_technology(**kwargs):
     try:
@@ -35,10 +43,10 @@ async def get_lvl(**kwargs):
                                               'Не указан')]}
 
 async def get_binary_options(**kwargs):
-    return {'binary': [(item, item) for item in ('Да', 'Нет')]}
+    return {'binary': [(item, item) for item in ('Да', 'Нет', 'Пропустить')]}
 
 async def get_currency(**kwargs):
-    return {"currency": [(item, item) for item in ('RUB', 'USD', 'EUR')]}
+    return {"currency": [(item, item) for item in ('RUB', 'USD', 'EUR', 'Пропустить')]}
 
 async def switch_page(c: CallbackQuery, b: Button, d: DialogManager):
     pagination_key = d.data['aiogd_context'].widget_data['navigate_vacancy_button']
@@ -62,11 +70,17 @@ async def switch_to_lvl(c: CallbackQuery, b: Button, d: DialogManager):
 
 @is_button_selected(key='r_lvl')
 async def switch_to_remote(c: CallbackQuery, b: Button, d: DialogManager):
+    dialog_data = d.data['aiogd_context'].widget_data['r_lvl']
+    print(dialog_data)
+    await c.message.delete()
+    await c.message.answer(f"Вы выбрали следующий уровень: {dialog_data}")
     await d.switch_to(DialogState.select_remote)
 
+@is_button_selected(key='r_remote')
 async def switch_to_relocation(c: CallbackQuery, b: Button, d: DialogManager):
     await d.switch_to(DialogState.select_relocation)
 
+@is_button_selected(key='r_relocation')
 async def switch_to_currency(c: CallbackQuery, b: Button, d: DialogManager):
     await d.switch_to(DialogState.select_currency)
 
@@ -77,22 +91,24 @@ async def switch_to_min_salary(c: CallbackQuery, b: Button, d: DialogManager):
     lvl = widget_data['r_lvl']
     remote = widget_data['r_remote']
     relocation = widget_data['r_relocation']
-    currency = widget_data['r_currency']
+    currency = widget_data['r_currency'] if widget_data['r_currency'] != "Пропустить" else None
+    if currency:
+        await d.data['state'].update_data({"max_salary_currency": currency})
+
     await d.data['state'].update_data({"technologies": tech, "skill": lvl,
                                        "remote": True if remote == "Да" else False, 
-                                       "relocation": True if relocation == "Да" else False,
-                                       "max_salary_currency": currency})
+                                       "relocation": True if relocation == "Да" else False})
+    
     await c.message.delete()
     await c.message.answer(f"""Следующие параметры поиска:
 Технологии: {tech}
 Уровень разработчика: {lvl}
-Удаленно: {remote if remote else "Не указано"}
-Релокация:{relocation if relocation else "Не указано"}
-Валюта зарплаты: {currency}""")
-    await c.message.answer("Напишите минимальную зарплату в числовом формате (например, 50000)",
-    reply_markup=skip_salary_kbd)
+Удаленно: {remote if remote != "Пропустить" else "Не указано"}
+Релокация:{relocation if relocation != "Пропустить" else "Не указано"}
+Валюта зарплаты: {currency if currency != "Пропустить" else "Не указана"}""")
+    await c.message.answer("Напишите минимальную зарплату в числовом формате (например, 50000). Если не важна - напишите 0")
     await d.mark_closed()
-    await Stack.min_salary.set()
+    await PostDialogState.select_min_salary.set()
 
  
 technology_keyboard = Window(Const("Выберите технологии:"),
@@ -123,12 +139,6 @@ level_keyboard = Window(Const("Выбери подходящий уровень:
                           default_nav,
                           getter=get_lvl,
                           state=DialogState.select_lvl)
-
-binary_widget = Group(Radio(Format("✅ {item[0]}"),
-                            Format("🔘 {item[0]}"),
-                                      id="r_binary", items='binary',
-                                      item_id_getter=operator.itemgetter(1)),
-                                width=2)
 
 remote_keyboard = Window(Const("Удаленно? (Можно пропустить)"),
                          Group(Radio(Format("✅ {item[0]}"),
@@ -163,6 +173,44 @@ currency_keyboard = Window(Const("В какой валюте заработна�
                          getter=get_currency,
                          state=DialogState.select_currency)
 
-dialog = Dialog(technology_keyboard, level_keyboard, 
+query_dialog = Dialog(technology_keyboard, level_keyboard, 
                 remote_keyboard, relocation_keyboard, 
                 currency_keyboard)
+
+async def get_vacancy_list(**kwargs):
+    dialog_manager = kwargs['dialog_manager']
+    print(f"DIALOG MANAGER IN GETTER: {dialog_manager}")
+    print(f"DIALOG MANAGET DATA IN GETTER: {dialog_manager.data}")
+    try:
+        pagination_key = kwargs['aiogd_context'].widget_data['page']
+    except KeyError:
+        pagination_key = 1
+        kwargs['aiogd_context'].widget_data['page'] = pagination_key
+    print(f"WIDGET DATA IN GETTER: {kwargs['aiogd_context'].widget_data}")
+    params = kwargs['aiogd_context'].widget_data
+    params['limit'] = 1
+    print(params)
+    return {"vacancy": get_vacancy_message_text(params=params)}
+
+async def switch_vacancy(c: CallbackQuery, b: Button, d: DialogManager):
+    print(f"DIALOG_MANAGER IN SWITCH: {d}")
+    print(f"WIDGET DATA IN SWITCH: {d.data['aiogd_context'].widget_data}")
+    pagination_key = d.data['aiogd_context'].widget_data['page']
+    if b.widget_id == "next_vac":
+        pagination_key += 1
+    elif b.widget_id == "prev_vac":
+        if pagination_key > 1:
+           pagination_key -= 1
+        elif pagination_key == 1:
+            await c.answer("Дальше вакансий нет😕")
+    d.data['aiogd_context'].widget_data['page'] = pagination_key
+    await d.switch_to(SearchVacancyState.searching_vacancy)
+
+vacancy_keyboard = Window(Format(text="{vacancy}"),
+                             Group(Button(Const("<"), on_click=switch_vacancy, id="prev_vac"),
+                                   Button(Const(">"), on_click=switch_vacancy, id="next_vac"),
+                                   width=2),
+                      getter=get_vacancy_list,
+                      state=SearchVacancyState.searching_vacancy)
+
+vacancy_dialog = Dialog(vacancy_keyboard)
