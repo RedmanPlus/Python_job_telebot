@@ -1,29 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-lang_keyboard = ReplyKeyboardMarkup(
-	keyboard=[
-		[
-			KeyboardButton(text="a"),
-			KeyboardButton(text="b")
-		], [
-			KeyboardButton(text="c")
-		]
-	],
-	resize_keyboard=True
-)
-
-lvl_keyboard = ReplyKeyboardMarkup(
-	keyboard=[
-		[
-			KeyboardButton(text="1"),
-			KeyboardButton(text="2"),
-		], [
-			KeyboardButton(text="3"),
-			KeyboardButton(text="4"),
-		]
-	],
-	resize_keyboard=True
-)
+skip_salary_kbd = ReplyKeyboardMarkup(keyboard=[KeyboardButton(text="Пропустить ввод зарплаты")], 
+                                      one_time_keyboard=True, resize_keyboard=True)
 
 binary_keyboard = ReplyKeyboardMarkup(
 	keyboard=[

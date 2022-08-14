@@ -3,7 +3,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text, Command
 from aiogram_dialog import DialogManager
 from loader import dp
-from keyboard import lang_keyboard, lvl_keyboard, binary_keyboard
+from keyboard import skip_salary_kbd, binary_keyboard
 from stack import Stack
 from states import DialogState
 from utils import get_vacancy_message_text
@@ -117,7 +117,8 @@ async def max_salary(message: Message, state: FSMContext):
 				{'min_salary': min_s}
 			)
 
-		await message.answer("Максимальная зарплата")
+		await message.answer("Напишите максимальную зарплату в числовом формате (например, 100000)",
+		reply_markup=skip_salary_kbd)
 		await Stack.next()
 	except ValueError:
 		await message.answer("Недопустимое значение")
