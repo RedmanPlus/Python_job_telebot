@@ -4,7 +4,7 @@ from aiogram_dialog import Window, Dialog, DialogManager
 from aiogram.types import CallbackQuery
 from aiogram_dialog.widgets.kbd import Radio, Button, Group, Multiselect, Back, Next ,Row
 from aiogram_dialog.widgets.text import Format, Const
-from states import DialogState, Stack
+from states import DialogState, PostDialogState
 from utils import cancel
 
 cancel_button = Button(Const("❌ Отмена"), id='cancel', on_click=cancel)
@@ -92,7 +92,7 @@ async def switch_to_remote(c: CallbackQuery, b: Button, d: DialogManager):
     #await d.data['state'].reset_state(with_data=True)
     print(dialog_data)
     await c.message.delete()
-    await c.message.answer(f"Вы выбрали следующие технологии: {', '.join(dialog_data)}")
+    await c.message.answer(f"Вы выбрали следующий уровень: {dialog_data}")
     #await c.message.answer("Напишите желаемый уровень разработчика:")
     await d.switch_to(DialogState.select_remote)
 
@@ -124,7 +124,7 @@ async def switch_to_min_salary(c: CallbackQuery, b: Button, d: DialogManager):
 Валюта зарплаты: {currency}
 Напишите минимальную зарплату:""")
     await d.mark_closed()
-    await Stack.min_salary.set()
+    await PostDialogState.select_min_salary.set()
 
  
 technology_keyboard = Window(Const("Выбери технологии:"),

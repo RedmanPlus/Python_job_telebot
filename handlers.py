@@ -4,8 +4,7 @@ from aiogram.dispatcher.filters import Text, Command
 from aiogram_dialog import DialogManager
 from loader import dp
 from keyboard import lang_keyboard, lvl_keyboard, binary_keyboard
-from stack import Stack
-from states import DialogState
+from states import DialogState, PostDialogState
 from utils import get_vacancy_message_text
 
 @dp.message_handler(commands=["reset"])
@@ -20,7 +19,7 @@ async def start(message: Message, state: FSMContext):
 
 # Вывод вакансий по имеющемуся стеку
 
-@dp.message_handler(Command('find'), state=Stack.finish)
+@dp.message_handler(Command('find'), state=PostDialogState.final_state)
 async def find_vacancy(message: Message, state: FSMContext):
 	data = await state.get_data()
 	try:
@@ -49,99 +48,60 @@ async def send_to_stack_filling(message: Message):
 @dp.message_handler(commands=['stack'], state=None)
 async def language(message: Message, dialog_manager: DialogManager):
 	await dialog_manager.start(DialogState.select_technology)
-	"""await message.answer("Язык", reply_markup=lang_keyboard)
 
-	await Stack.language.set()"""
-
-@dp.message_handler(Command('stack'), state=Stack.finish)
+@dp.message_handler(Command('stack'), state=PostDialogState.final_state)
 async def language_restart(message: Message, state: FSMContext, dialog_manager: DialogManager):
 	await state.finish()
 	
 	await dialog_manager.start(DialogState.select_technology)
 
-@dp.message_handler(state=Stack.lvl)
-async def location(message: Message, state: FSMContext):
-	lvl = message.text
+@dp.message_handler(state=PostDialogState.select_min_salary)
+async def select_min_salary(message: Message, state: FSMContext):
+	min_salary = message.text
 	await state.update_data(
-			{'skill': lvl}
-		)
+		{'min_salary': min_salary}
+	)
 
-	await message.answer("Локация", reply_markup=ReplyKeyboardRemove())
-	await Stack.next()
+	await message.answer("Теперь введите максимальную желаемую зарплату")
+	await PostDialogState.next()
 
-@dp.message_handler(state=Stack.location)
-async def remote(message: Message, state: FSMContext):
-	loc = message.text
+@dp.message_handler(state=PostDialogState.select_max_salary)
+async def select_max_salary(message: Message, state: FSMContext):
+	max_salary = message.text
 	await state.update_data(
-			{'location': loc}
-		)
+		{'max_salary': max_salary}
+	)
 
-	await message.answer("Удаленно", reply_markup=binary_keyboard)
-	await Stack.next()
+	data = await state.get_data()
+	await message.answer(f"""Замечательно, мы будем искать вакансии с ЗП 
+							в диапозоне {data['min_salary']}-{data['max_salary']}""")
+	await message.answer("Теперь введите, в каком городе искать вакансию")
+	await PostDialogState.next()
 
-@dp.message_handler(state=Stack.remote)
-async def relocation(message: Message, state: FSMContext):
-	remote = message.text
-	if remote == "Да":
-		remote = True
-	elif remote == "Нет":
-		remote = False
-
+@dp.message_handler(state=PostDialogState.select_location)
+async def select_location(message: Message, state: FSMContext):
+	location = message.text
 	await state.update_data(
-			{'remote': remote}
-		)
+		{'location': location}
+	)
 
-	await message.answer("Релокация", reply_markup=binary_keyboard)
-	await Stack.next()
-
-@dp.message_handler(state=Stack.relocation)
-async def min_salary(message: Message, state: FSMContext):
-	reloc = message.text
-	if reloc == "Да":
-		reloc = True
-	elif reloc == "Нет":
-		reloc = False
-
-	await state.update_data(
-			{'relocation': reloc}
-		)
-
-	await message.answer("Минимальная зарплата", reply_markup=ReplyKeyboardRemove())
-	await Stack.next()
-
-@dp.message_handler(state=Stack.min_salary)
-async def max_salary(message: Message, state: FSMContext):
-	try:
-		min_s = int(message.text)
-		await state.update_data(
-				{'min_salary': min_s}
-			)
-
-		await message.answer("Максимальная зарплата")
-		await Stack.next()
-	except ValueError:
-		await message.answer("Недопустимое значение")
-
-@dp.message_handler(state=Stack.max_salary)
-async def final(message: Message, state: FSMContext):
-	try:
-		max_s = int(message.text)
-		await state.update_data(
-				{'max_salary': max_s}
-			)
-
-		data = await state.get_data()
-
-		print(data)
-
-		await message.answer(f"{data}")
-		await Stack.next()
-	except ValueError:
-		await message.answer("Недопустимое значение")
-    
+	data = await state.get_data()
+	await message.answer(f"""
+Все готово!
+Теперь мы будем искать для вас вакансии по следующим параметрам:
+Технологии: {data['technologies']}
+Уровень разработчика: {data['skill']}
+Удаленно: {data['remote']}
+С релокацией: {data['relocation']}
+Зарплата в {data['max_salary_currency']}
+От {data['min_salary']} до {data['max_salary']}
+В городе {data['location']}
+	""")
+	await message.answer("Чтобы начать получать вакансии, просто пришлите мне команду /find")
+	await PostDialogState.next()
 
 # TODO: Показ нынешнего стека и замена одного на другой
-@dp.message_handler(Command('showstack'), state=Stack.finish)
+@dp.message_handler(Command('showstack'), state=PostDialogState.final_state)
 async def show_stack(message: Message, state: FSMContext):
 	data = await state.get_data()
 	print(data)
