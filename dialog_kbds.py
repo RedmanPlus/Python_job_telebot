@@ -16,7 +16,6 @@ def is_button_selected(key: str = None):
     def wrapper(async_func):
         async def _wrapper(c: CallbackQuery, b: Button, d: DialogManager):
             if key in d.data['aiogd_context'].widget_data.keys():
-                print("DECORATOR")
                 await async_func(c, b, d)
             else:
                 await c.answer("Сначала нужно выбрать хотя бы одну из опций")
@@ -88,44 +87,48 @@ async def switch_to_currency(c: CallbackQuery, b: Button, d: DialogManager):
 async def switch_to_min_salary(c: CallbackQuery, b: Button, d: DialogManager):
     widget_data = d.data['aiogd_context'].widget_data
     tech = ', '.join(widget_data['m_tech'])
-    lvl = widget_data['r_lvl']
-    remote = widget_data['r_remote']
-    relocation = widget_data['r_relocation']
-    currency = widget_data['r_currency'] if widget_data['r_currency'] != "Пропустить" else None
+    lvl = widget_data['r_lvl'] if ((widget_data['r_lvl'] != "Не указан") or (widget_data['r_lvl'] != None)) else None
+    remote = widget_data['r_remote'] if ((widget_data['r_currency'] != "Пропустить") and (widget_data['r_currency'] != None)) else None
+    relocation = widget_data['r_relocation'] if ((widget_data['r_relocation'] != "Пропустить") and (widget_data['r_relocation'] != None)) else None
+    currency = widget_data['r_currency'] if ((widget_data['r_currency'] != "Пропустить") and (widget_data['r_currency'] != None)) else None
+    
+    if lvl:
+        await d.data['state'].update_data({"skill": lvl})
+    if remote:
+        await d.data['state'].update_data({"remote":True if remote == "Да" else False})
+    if relocation:
+        await d.data['state'].update_data({"reloaction":True if remote == "Да" else False})
     if currency:
         await d.data['state'].update_data({"max_salary_currency": currency})
 
-    await d.data['state'].update_data({"technologies": tech, "skill": lvl,
-                                       "remote": True if remote == "Да" else False, 
-                                       "relocation": True if relocation == "Да" else False})
+    await d.data['state'].update_data({"technologies": tech})
     
     await c.message.delete()
     await c.message.answer(f"""Следующие параметры поиска:
 Технологии: {tech}
 Уровень разработчика: {lvl}
-Удаленно: {remote if remote != "Пропустить" else "Не указано"}
-Релокация:{relocation if relocation != "Пропустить" else "Не указано"}
-Валюта зарплаты: {currency if currency != "Пропустить" else "Не указана"}""")
+Удаленно: {remote if ((remote != "Пропустить") and (remote != None)) else "Не указано"}
+Релокация: {relocation if ((relocation != "Пропустить") and (relocation != None)) else "Не указана"}
+Валюта зарплаты: {currency if ((currency != "Пропустить") and (currency != None)) else "Не указана"}""")
     await c.message.answer("Напишите минимальную зарплату в числовом формате (например, 50000). Если не важна - напишите 0")
     await d.mark_closed()
     await PostDialogState.select_min_salary.set()
 
  
 technology_keyboard = Window(Const("Выберите технологии:"),
-                          Group(Multiselect(Format("✅ {item[0]}"),
-                                            Format("🔘 {item[0]}"),
-                                      id="m_tech", items='technology',
-                                      item_id_getter=operator.itemgetter(1)),
-                                Button(Const("<"), on_click=switch_page, id="prev_tech"),
-                                Button(Const(">"), on_click=switch_page, id="next_tech"),
-                                width=2),
-                          
-                          Button(continue_button,
-                                 on_click=switch_to_lvl,
-                                 id='continue'),
-                          default_nav,
-                          getter=get_technology,
-                          state=DialogState.select_technology)
+                             Group(Multiselect(Format("✅ {item[0]}"),
+                                               Format("🔘 {item[0]}"),
+                                         id="m_tech", items='technology',
+                                         item_id_getter=operator.itemgetter(1)),
+                                   Button(Const("<"), on_click=switch_page, id="prev_tech"),
+                                   Button(Const(">"), on_click=switch_page, id="next_tech"),
+                                   width=2),
+                             Button(continue_button,
+                                    on_click=switch_to_lvl,
+                                    id='continue'),
+                             default_nav,
+                             getter=get_technology,
+                             state=DialogState.select_technology)
 
 level_keyboard = Window(Const("Выбери подходящий уровень:"),
                           Group(Radio(Format("✅ {item[0]}"),
@@ -163,11 +166,11 @@ relocation_keyboard = Window(Const("Релокация? (Можно пропус
                          state=DialogState.select_relocation)
 
 currency_keyboard = Window(Const("В какой валюте заработная плата?"),
-                            Group(Radio(Format("✅ {item[0]}"),
-                            Format("🔘 {item[0]}"),
-                                      id="r_currency", items='currency',
-                                      item_id_getter=operator.itemgetter(1)),
-                                width=2),
+                           Group(Radio(Format("✅ {item[0]}"),
+                                       Format("🔘 {item[0]}"),
+                                       id="r_currency", items='currency',
+                                       item_id_getter=operator.itemgetter(1)),
+                                 width=2),
                          Button(continue_button, on_click=switch_to_min_salary, id='continue'),
                          default_nav,
                          getter=get_currency,
