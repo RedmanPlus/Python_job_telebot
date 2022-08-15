@@ -19,7 +19,7 @@ async def start(message: Message, state: FSMContext):
 
 # Вывод вакансий по имеющемуся стеку
 
-@dp.message_handler(Command('find'), state=PostDialogState.final_state)
+"""@dp.message_handler(Command('find'), state=PostDialogState.final_state)
 async def find_vacancy(message: Message, state: FSMContext):
 	data = await state.get_data()
 	try:
@@ -36,7 +36,7 @@ async def find_vacancy(message: Message, state: FSMContext):
 		)
 		await message.answer(result[len(result) - 1])
 		if len(result) - 1 <= 0:
-			await message.answer("Больше вакансий по данным параметрам нет")
+			await message.answer("Больше вакансий по данным параметрам нет")"""
 
 @dp.message_handler(Command('find'), state=None)
 async def send_to_stack_filling(message: Message):
@@ -104,7 +104,7 @@ async def select_location(message: Message, state: FSMContext):
 	await message.answer("Чтобы начать получать вакансии, просто пришлите мне команду /find")
 	await PostDialogState.next()
 
-@dp.message_handler(Command("f"), state=PostDialogState.final_state)
+@dp.message_handler(Command("find"), state=PostDialogState.final_state)
 async def list_vacancy(message: Message, state: FSMContext, dialog_manager: DialogManager):
 	await dialog_manager.start(SearchVacancyState.searching_vacancy)
 	

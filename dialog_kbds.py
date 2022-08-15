@@ -177,11 +177,7 @@ query_dialog = Dialog(technology_keyboard, level_keyboard,
                 remote_keyboard, relocation_keyboard, 
                 currency_keyboard)
 
-async def get_vacancy_list(**kwargs):
-    """достаём данные из handler при помощи await kwargs['dialog_manager'].data['state'].get_data(),
-     т.к. в хендлере state пользователя для handler-а и 
-     state атрибут dialogmanager-a в handler-e - один и тот же объект в памяти
-     а дату, пришедшую из кнопок (виджетов) достаём через kwargs['aiogd_context'].widget_data"""
+async def get_vacancy(**kwargs):
     try:
         pagination_key = (await kwargs['dialog_manager'].data['state'].get_data())['page']
     except KeyError:
@@ -189,17 +185,18 @@ async def get_vacancy_list(**kwargs):
         await kwargs['dialog_manager'].data['state'].update_data({'page': pagination_key})
     params = await kwargs['dialog_manager'].data['state'].get_data()
     params['limit'] = 1
-    return {"vacancy": get_vacancy_message_text(params=params)}
+    return {"vacancy": get_vacancy_message_text(params=params)[0]}
 
 async def switch_vacancy(c: CallbackQuery, b: Button, d: DialogManager):
     pagination_key = (await d.data['state'].get_data())['page']
-    if b.widget_id == "next_vac":
-        pagination_key += 1
-    elif b.widget_id == "prev_vac":
-        if pagination_key > 1:
-           pagination_key -= 1
-        elif pagination_key == 1:
-            await c.answer("Дальше вакансий нет😕")
+    match b.widget_id:
+        case "next_vac":
+            pagination_key += 1
+        case "prev_vac":
+            if pagination_key > 1:
+               pagination_key -= 1
+            elif pagination_key == 1:
+                await c.answer("Дальше вакансий нет😕")
     await d.data['state'].update_data({"page": pagination_key})
     await d.switch_to(SearchVacancyState.searching_vacancy)
 
@@ -208,7 +205,7 @@ vacancy_keyboard = Window(Format(text="{vacancy}"),
                                    Button(Const(">"), on_click=switch_vacancy, id="next_vac"),
                                    width=2),
                           cancel_button,
-                      getter=get_vacancy_list,
+                      getter=get_vacancy,
                       state=SearchVacancyState.searching_vacancy)
 
 vacancy_dialog = Dialog(vacancy_keyboard)

@@ -2,26 +2,34 @@ import requests
 from aiogram.types import CallbackQuery
 from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd import Button
+from serializers import Vacancy
 
 def get_vacancies_json(params: dict):
-    #params['limit'] = 500
-    print(f"params: {params}")
     response = requests.get("https://devseye.ru/api/vacancy", params=params)
     return response.json()
 
-def get_vacancy_message_text(params: dict) -> str:
+def get_vacancy_message_text(params: dict) -> list:
     response = get_vacancies_json(params)
-    print(response)
-    print(f"Launching get_vacancy_message_text with params {params}")
-    vacancies = response['results']
+    try:
+        vacancies = [Vacancy(vac_dct) for vac_dct in response['results']]
+        if len(vacancies) < 1:
+            return ["Нет вакансий с заданными параметрами 🤔"]
+    except KeyError:
+        return ["Больше вакансий с такими параметрами нет 🤔"]
     return_lst = [f"""
-Роль: {vacancy['role']}
-Локация: {vacancy['location']}
-З/П: {vacancy['min_salary']} - {vacancy['max_salary']}
-
-{vacancy['desc']}
-    """ for vacancy in vacancies]
-    #print(f"Return list: {return_lst}")
+<strong>Дата публикации:</strong> {vacancy.datetime.date()}
+<strong>Роль:</strong> {vacancy.role}
+<strong>Ключевые навыки, указанные в описании:</strong> {', '.join(vacancy.technologies)}
+<strong>Зарплата:</strong> от {vacancy.min_salary} до {vacancy.max_salary} {vacancy.salary_currency}
+<strong>Описание:</strong> 
+{vacancy.desc}
+<strong>Задачи:</strong> 
+{vacancy.tasks}
+<strong>Требования:</strong> 
+{vacancy.requirements}
+<strong>Ссылка:</strong> https://t.me/{vacancy.channel}/{vacancy.message_id}
+""" 
+    for vacancy in vacancies]
     return return_lst
 
 async def cancel(c: CallbackQuery, b: Button, d: DialogManager):
