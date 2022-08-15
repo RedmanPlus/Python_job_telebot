@@ -1,3 +1,4 @@
+from tkinter import dialog
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text, Command
@@ -105,11 +106,8 @@ async def select_location(message: Message, state: FSMContext):
 
 @dp.message_handler(Command("f"), state=PostDialogState.final_state)
 async def list_vacancy(message: Message, state: FSMContext, dialog_manager: DialogManager):
-	print(f"WIDGET DATA IN HANDLER: {await state.get_data()}")
-	print(dialog_manager)
 	await dialog_manager.start(SearchVacancyState.searching_vacancy)
-	dialog_manager.data['aiogd_context'].widget_data = await state.get_data()
-	print(f"WIDGET DATA IN DIALOG MANAGER: {dialog_manager.data['aiogd_context'].widget_data}")
+	
 
 @dp.message_handler(Command('showstack'), state=PostDialogState.final_state)
 async def show_stack(message: Message, state: FSMContext):

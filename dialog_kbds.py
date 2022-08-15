@@ -178,24 +178,21 @@ query_dialog = Dialog(technology_keyboard, level_keyboard,
                 currency_keyboard)
 
 async def get_vacancy_list(**kwargs):
-    dialog_manager = kwargs['dialog_manager']
-    print(f"DIALOG MANAGER IN GETTER: {dialog_manager}")
-    print(f"DIALOG MANAGET DATA IN GETTER: {dialog_manager.data}")
+    """достаём данные из handler при помощи await kwargs['dialog_manager'].data['state'].get_data(),
+     т.к. в хендлере state пользователя для handler-а и 
+     state атрибут dialogmanager-a в handler-e - один и тот же объект в памяти
+     а дату, пришедшую из кнопок (виджетов) достаём через kwargs['aiogd_context'].widget_data"""
     try:
-        pagination_key = kwargs['aiogd_context'].widget_data['page']
+        pagination_key = (await kwargs['dialog_manager'].data['state'].get_data())['page']
     except KeyError:
         pagination_key = 1
-        kwargs['aiogd_context'].widget_data['page'] = pagination_key
-    print(f"WIDGET DATA IN GETTER: {kwargs['aiogd_context'].widget_data}")
-    params = kwargs['aiogd_context'].widget_data
+        await kwargs['dialog_manager'].data['state'].update_data({'page': pagination_key})
+    params = await kwargs['dialog_manager'].data['state'].get_data()
     params['limit'] = 1
-    print(params)
     return {"vacancy": get_vacancy_message_text(params=params)}
 
 async def switch_vacancy(c: CallbackQuery, b: Button, d: DialogManager):
-    print(f"DIALOG_MANAGER IN SWITCH: {d}")
-    print(f"WIDGET DATA IN SWITCH: {d.data['aiogd_context'].widget_data}")
-    pagination_key = d.data['aiogd_context'].widget_data['page']
+    pagination_key = (await d.data['state'].get_data())['page']
     if b.widget_id == "next_vac":
         pagination_key += 1
     elif b.widget_id == "prev_vac":
@@ -203,13 +200,14 @@ async def switch_vacancy(c: CallbackQuery, b: Button, d: DialogManager):
            pagination_key -= 1
         elif pagination_key == 1:
             await c.answer("Дальше вакансий нет😕")
-    d.data['aiogd_context'].widget_data['page'] = pagination_key
+    await d.data['state'].update_data({"page": pagination_key})
     await d.switch_to(SearchVacancyState.searching_vacancy)
 
 vacancy_keyboard = Window(Format(text="{vacancy}"),
                              Group(Button(Const("<"), on_click=switch_vacancy, id="prev_vac"),
                                    Button(Const(">"), on_click=switch_vacancy, id="next_vac"),
                                    width=2),
+                          cancel_button,
                       getter=get_vacancy_list,
                       state=SearchVacancyState.searching_vacancy)
 
