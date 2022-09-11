@@ -10,6 +10,7 @@ def get_vacancies_json(params: dict):
 
 def get_vacancy_message_text(params: dict) -> list:
     response = get_vacancies_json(params)
+    print(f'\n\n\n\nParams: {params}\n\n\n\n')
     try:
         vacancies = [Vacancy(vac_dct) for vac_dct in response['results']]
         if len(vacancies) < 1:

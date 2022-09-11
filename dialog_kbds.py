@@ -64,15 +64,16 @@ async def switch_page(c: CallbackQuery, b: Button, d: DialogManager):
 async def switch_to_lvl(c: CallbackQuery, b: Button, d: DialogManager):
     dialog_data = d.data['aiogd_context'].widget_data['m_tech']
     await c.message.delete()
-    await c.message.answer(f"Вы выбрали следующие технологии: {', '.join(dialog_data)}")
+    if dialog_data:
+        await c.message.answer(f"Вы выбрали следующие технологии: {', '.join(dialog_data)}")
     await d.switch_to(DialogState.select_lvl)
 
 @is_button_selected(key='r_lvl')
 async def switch_to_remote(c: CallbackQuery, b: Button, d: DialogManager):
     dialog_data = d.data['aiogd_context'].widget_data['r_lvl']
-    print(dialog_data)
     await c.message.delete()
-    await c.message.answer(f"Вы выбрали следующий уровень: {dialog_data}")
+    if dialog_data:
+        await c.message.answer(f"Вы выбрали следующий уровень: {dialog_data}")
     await d.switch_to(DialogState.select_remote)
 
 @is_button_selected(key='r_remote')
@@ -92,30 +93,30 @@ async def switch_to_min_salary(c: CallbackQuery, b: Button, d: DialogManager):
     relocation = widget_data['r_relocation'] if ((widget_data['r_relocation'] != "Пропустить") and (widget_data['r_relocation'] != None)) else None
     currency = widget_data['r_currency'] if ((widget_data['r_currency'] != "Пропустить") and (widget_data['r_currency'] != None)) else None
     
-    if lvl:
+    if lvl and lvl != 'Не указан':
         await d.data['state'].update_data({"skill": lvl})
     if remote:
         await d.data['state'].update_data({"remote":True if remote == "Да" else False})
     if relocation:
-        await d.data['state'].update_data({"reloaction":True if remote == "Да" else False})
+        await d.data['state'].update_data({"relocation":True if remote == "Да" else False})
     if currency:
         await d.data['state'].update_data({"max_salary_currency": currency})
-
-    await d.data['state'].update_data({"technologies": tech})
+    if tech:
+        await d.data['state'].update_data({"technologies": tech})
     
     await c.message.delete()
     await c.message.answer(f"""Следующие параметры поиска:
-Технологии: {tech}
-Уровень разработчика: {lvl}
+Технологии: {tech if tech else 'Не указаны'}
+Уровень разработчика: {lvl if ((lvl != "Не указан") and (lvl != None)) else 'Не указан'}
 Удаленно: {remote if ((remote != "Пропустить") and (remote != None)) else "Не указано"}
 Релокация: {relocation if ((relocation != "Пропустить") and (relocation != None)) else "Не указана"}
 Валюта зарплаты: {currency if ((currency != "Пропустить") and (currency != None)) else "Не указана"}""")
-    await c.message.answer("Напишите минимальную зарплату в числовом формате (например, 50000). Если не важна - напишите 0")
+    await c.message.answer("Напиши минимальную зарплату в числовом формате (например, 50000). Если не важна - напиши 0")
     await d.mark_closed()
     await PostDialogState.select_min_salary.set()
 
  
-technology_keyboard = Window(Const("Выберите технологии:"),
+technology_keyboard = Window(Const("Выбери технологии:"),
                              Group(Multiselect(Format("✅ {item[0]}"),
                                                Format("🔘 {item[0]}"),
                                          id="m_tech", items='technology',
@@ -126,7 +127,7 @@ technology_keyboard = Window(Const("Выберите технологии:"),
                              Button(continue_button,
                                     on_click=switch_to_lvl,
                                     id='continue'),
-                             default_nav,
+                             cancel_button,
                              getter=get_technology,
                              state=DialogState.select_technology)
 
@@ -143,7 +144,7 @@ level_keyboard = Window(Const("Выбери подходящий уровень:
                           getter=get_lvl,
                           state=DialogState.select_lvl)
 
-remote_keyboard = Window(Const("Удаленно? (Можно пропустить)"),
+remote_keyboard = Window(Const("Удаленно?"),
                          Group(Radio(Format("✅ {item[0]}"),
                             Format("🔘 {item[0]}"),
                                       id="r_remote", items='binary',
@@ -154,7 +155,7 @@ remote_keyboard = Window(Const("Удаленно? (Можно пропустит
                          getter=get_binary_options,
                          state=DialogState.select_remote)
 
-relocation_keyboard = Window(Const("Релокация? (Можно пропустить)"), 
+relocation_keyboard = Window(Const("Релокация?"), 
                          Group(Radio(Format("✅ {item[0]}"),
                             Format("🔘 {item[0]}"),
                                       id="r_relocation", items='binary',
@@ -187,6 +188,8 @@ async def get_vacancy(**kwargs):
         pagination_key = 1
         await kwargs['dialog_manager'].data['state'].update_data({'page': pagination_key})
     params = await kwargs['dialog_manager'].data['state'].get_data()
+    if int(params['salary_above']) == 0:
+        params.pop('salary_above')
     params['limit'] = 1
     return {"vacancy": get_vacancy_message_text(params=params)[0]}
 

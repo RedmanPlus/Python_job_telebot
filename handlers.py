@@ -4,15 +4,20 @@ from aiogram.dispatcher.filters import Text, Command
 from aiogram_dialog import DialogManager
 from loader import dp
 from states import DialogState, PostDialogState, SearchVacancyState
+from config import CHANNELS_FOR_SUB
+from filters import is_user_subscribed
 
 @dp.message_handler(commands=['start', 'help'])
 async def start(message: Message, state: FSMContext):
-	await message.answer("""Привет👋! Я помогаю найти работу разработчикам ПО. 
+    await message.answer("""Привет👋! Я помогаю найти работу разработчикам ПО. 
 Пройди опрос по команде /stack и я пришлю подходящие вакансии""")
 
 @dp.message_handler(commands=['stack'], state=None)
 async def language(message: Message, dialog_manager: DialogManager):
-	await dialog_manager.start(DialogState.select_technology)
+    if is_user_subscribed(CHANNELS_FOR_SUB, message.from_user.id):
+        await dialog_manager.start(DialogState.select_technology)
+    else:
+        await message.answer('Необходимо подписаться на канал')
 
 @dp.message_handler(Command('stack'), state=PostDialogState.final_state)
 async def language_restart(message: Message, state: FSMContext, dialog_manager: DialogManager):
@@ -24,8 +29,8 @@ async def select_min_salary(message: Message, state: FSMContext):
 	min_salary = message.text
 	if min_salary.isdigit():
 		await state.update_data({'salary_above': min_salary})
-		await message.answer(f"Замечательно, мы будем искать вакансии с зарплатой от {min_salary}")
-		await message.answer("Теперь введите, в каком городе искать вакансию. Чтобы пропустить это шаг, напишите '-' ")
+		await message.answer(f"Замечательно, будем искать вакансии с зарплатой от {min_salary}")
+		await message.answer("Теперь введи, в каком городе искать вакансию. Чтобы пропустить это шаг, напиши '-' ")
 		await PostDialogState.next()
 	else:
 		await message.answer("Тут нужно ввести число или пропустить шаг")
@@ -36,7 +41,7 @@ async def select_location(message: Message, state: FSMContext):
 	if location != "-":
 		await state.update_data({'location': location})
 	data = await state.get_data()
-	msg = "Отлично! Теперь мы будем искать вакансии по следующим параметрам:\n"
+	msg = "Отлично! Теперь будем искать вакансии по следующим параметрам:\n"
 	for k, v in data.items():
 		match k:
 			case 'technologies':
@@ -55,7 +60,7 @@ async def select_location(message: Message, state: FSMContext):
 				msg += f"Локация: {v}" + "\n"	
 	
 	await message.answer(msg)
-	await message.answer("Чтобы начать получать вакансии, просто пришлите мне команду /find")
+	await message.answer("Чтобы начать получать вакансии, просто пришли мне команду /find")
 	await PostDialogState.next()
 
 @dp.message_handler(Command("find"), state=PostDialogState.final_state)
@@ -64,16 +69,4 @@ async def list_vacancy(message: Message, state: FSMContext, dialog_manager: Dial
 
 @dp.message_handler(Command('find'), state=None)
 async def send_to_stack_filling(message: Message):
-	await message.answer("Пройдите опрос по команде /stack")
-
-@dp.message_handler(Command('showstack'), state=PostDialogState.final_state)
-async def show_stack(message: Message, state: FSMContext):
-	data = await state.get_data()
-	print(data)
-	msg = f"""
-Уровень: {data['skill']}
-Технологии: {data['technologies']}
-ЗП: от {data['salary_above']}
-	"""
-
-	await message.answer(msg)
+	await message.answer("Пройди опрос по команде /stack")
