@@ -70,3 +70,9 @@ async def list_vacancy(message: Message, state: FSMContext, dialog_manager: Dial
 @dp.message_handler(Command('find'), state=None)
 async def send_to_stack_filling(message: Message):
 	await message.answer("Пройди опрос по команде /stack")
+
+@dp.message_handler(Command('contacts'))
+async def send_contact(message: Message):
+    await message.answer("""<strong>Разработчики:</strong>
+<a href="https://t.me/arseny_chebyshev">Арсений Чебышев</a>
+<a href="https://t.me/redman_plus">Антон Румянцев</a>""")
