@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher
 from aiogram_dialog import DialogRegistry
-from aiogram.contrib.fsm_storage.redis import RedisStorage2
+# from aiogram.contrib.fsm_storage.redis import RedisStorage2 - пока redis не нужен - комментим ненужную зависимость
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from config import TOKEN
 from dialog_kbds import query_dialog, vacancy_dialog
