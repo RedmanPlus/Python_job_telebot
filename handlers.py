@@ -15,14 +15,9 @@ async def start(message: Message, state: FSMContext):
 @dp.message_handler(commands=['stack'], state=None)
 async def language(message: Message, dialog_manager: DialogManager):
     if is_user_subscribed(CHANNELS_FOR_SUB, message.from_user.id):
-        await dialog_manager.start(DialogState.select_technology)
+        await dialog_manager.start(DialogState.start)
     else:
         await message.answer('Необходимо подписаться на канал')
-
-@dp.message_handler(Command('stack'), state=PostDialogState.final_state)
-async def language_restart(message: Message, state: FSMContext, dialog_manager: DialogManager):
-	await state.finish()
-	await dialog_manager.start(DialogState.select_technology)
 
 @dp.message_handler(state=PostDialogState.select_min_salary)
 async def select_min_salary(message: Message, state: FSMContext):

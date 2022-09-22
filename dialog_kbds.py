@@ -6,21 +6,12 @@ from aiogram_dialog.widgets.kbd import Radio, Button, Group, Multiselect, Back, 
 from aiogram_dialog.widgets.text import Format, Const
 from states import DialogState, PostDialogState, SearchVacancyState
 from utils import cancel, get_vacancy_message_text
+from filters import is_button_selected
 
 cancel_button = Button(Const("❌ Отмена"), id='cancel', on_click=cancel)
 back_button = Back(Const("⬅ Назад"))
 continue_button = Const("Продолжить ➡")
 default_nav = Group(back_button, cancel_button, width=2)
-
-def is_button_selected(key: str = None):
-    def wrapper(async_func):
-        async def _wrapper(c: CallbackQuery, b: Button, d: DialogManager):
-            if key in d.data['aiogd_context'].widget_data.keys():
-                await async_func(c, b, d)
-            else:
-                await c.answer("Сначала нужно выбрать хотя бы одну из опций")
-        return _wrapper
-    return wrapper
 
 async def get_technology(**kwargs):
     try:
@@ -42,7 +33,11 @@ async def get_lvl(**kwargs):
                                               'Не указан')]}
 
 async def get_binary_options(**kwargs):
-    return {'binary': [(item, item) for item in ('Да', 'Нет', 'Пропустить')]}
+    dct = {'binary': [(item, item) for item in ('Да', 'Нет', 'Пропустить')], "code": True}
+    if 'no_code' in kwargs['aiogd_context'].widget_data.keys():
+        dct['code'] = False
+        dct.update({"no_code": True})
+    return dct
 
 async def get_currency(**kwargs):
     return {"currency": [(item, item) for item in ('RUB', 'USD', 'EUR', 'Пропустить')]}
@@ -68,12 +63,15 @@ async def switch_to_lvl(c: CallbackQuery, b: Button, d: DialogManager):
         await c.message.answer(f"Вы выбрали следующие технологии: {', '.join(dialog_data)}")
     await d.switch_to(DialogState.select_lvl)
 
-@is_button_selected(key='r_lvl')
 async def switch_to_remote(c: CallbackQuery, b: Button, d: DialogManager):
-    dialog_data = d.data['aiogd_context'].widget_data['r_lvl']
-    await c.message.delete()
-    if dialog_data:
-        await c.message.answer(f"Вы выбрали следующий уровень: {dialog_data}")
+    if not b.widget_id == 'no_code':
+        dialog_data = d.data['aiogd_context'].widget_data['r_lvl']
+        await c.message.delete()
+        if dialog_data:
+            await c.message.answer(f"Вы выбрали следующий уровень: {dialog_data}")
+    else:
+        await d.data['state'].update_data({'channel_id': 'itjobs_nocode'})
+        d.data['aiogd_context'].widget_data['no_code'] = True
     await d.switch_to(DialogState.select_remote)
 
 @is_button_selected(key='r_remote')
@@ -87,13 +85,16 @@ async def switch_to_currency(c: CallbackQuery, b: Button, d: DialogManager):
 @is_button_selected(key='r_currency')
 async def switch_to_min_salary(c: CallbackQuery, b: Button, d: DialogManager):
     widget_data = d.data['aiogd_context'].widget_data
-    tech = ', '.join(widget_data['m_tech'])
-    lvl = widget_data['r_lvl'] if ((widget_data['r_lvl'] != "Не указан") or (widget_data['r_lvl'] != None)) else None
+    tech = ', '.join(widget_data['m_tech']) if 'm_tech' in widget_data.keys() else None
+    if 'r_lvl' in widget_data.keys():
+        lvl = widget_data['r_lvl'] if widget_data['r_lvl'] != "Не указан" else None
+    else:
+        lvl = None
     remote = widget_data['r_remote'] if ((widget_data['r_currency'] != "Пропустить") and (widget_data['r_currency'] != None)) else None
     relocation = widget_data['r_relocation'] if ((widget_data['r_relocation'] != "Пропустить") and (widget_data['r_relocation'] != None)) else None
     currency = widget_data['r_currency'] if ((widget_data['r_currency'] != "Пропустить") and (widget_data['r_currency'] != None)) else None
     
-    if lvl and lvl != 'Не указан':
+    if lvl:
         await d.data['state'].update_data({"skill": lvl})
     if remote:
         await d.data['state'].update_data({"remote":True if remote == "Да" else False})
@@ -115,7 +116,22 @@ async def switch_to_min_salary(c: CallbackQuery, b: Button, d: DialogManager):
     await d.mark_closed()
     await PostDialogState.select_min_salary.set()
 
- 
+
+async def switch_to_technology(c: CallbackQuery, b: Button, d: DialogManager):
+    await d.switch_to(DialogState.select_technology)
+
+async def reset(c: CallbackQuery, b: Button, d: DialogManager):
+    await d.mark_closed()
+    await d.data['state'].reset_state(with_data=True)
+    await d.start(DialogState.start)
+
+start_keyboard = Window(Const("Какие вакансии тебя интересуют: Code или No-Code?"),
+                        Group(Button(Const("Code"), id='code', on_click=switch_to_technology),
+                              Button(Const("No-Code"), id='no_code', on_click=switch_to_remote),
+                              width=2),
+                            state=DialogState.start)
+                               
+
 technology_keyboard = Window(Const("Выбери технологии:"),
                              Group(Multiselect(Format("✅ {item[0]}"),
                                                Format("🔘 {item[0]}"),
@@ -151,7 +167,9 @@ remote_keyboard = Window(Const("Удаленно?"),
                                       item_id_getter=operator.itemgetter(1)),
                                 width=2),
                          Button(continue_button, on_click=switch_to_relocation, id='continue'),
-                         default_nav,
+                         Group(Back(Const("⬅ Назад"), when="code"),
+                               Button(Const("⬅ Назад"), id='back', on_click=reset, when="no_code"),
+                               cancel_button, width=2),
                          getter=get_binary_options,
                          state=DialogState.select_remote)
 
@@ -177,7 +195,7 @@ currency_keyboard = Window(Const("В какой валюте заработна�
                          getter=get_currency,
                          state=DialogState.select_currency)
 
-query_dialog = Dialog(technology_keyboard, level_keyboard, 
+query_dialog = Dialog(start_keyboard, technology_keyboard, level_keyboard, 
                 remote_keyboard, relocation_keyboard, 
                 currency_keyboard)
 

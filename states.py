@@ -1,6 +1,7 @@
 from aiogram.dispatcher.filters.state import StatesGroup, State
 
 class DialogState(StatesGroup):
+	start = State()
 	select_technology = State()
 	select_lvl = State()
 	select_remote = State()

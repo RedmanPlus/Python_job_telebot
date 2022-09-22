@@ -4,6 +4,4 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN = os.getenv('BOT_TOKEN')
-CHANNELS_FOR_SUB =[os.getenv('PYTHON_JOB_STR_ID'), #Python 
-                   os.getenv('REACT_JOB_STR_ID'), #React
-                   os.getenv('JAVA_JOB_STR_ID') ]#Java
+CHANNELS_FOR_SUB =[f"@{ch[13:]}" for ch in open('channels.txt', 'r', encoding='utf-8').read().split('\n')]

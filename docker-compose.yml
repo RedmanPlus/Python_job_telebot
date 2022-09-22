@@ -3,3 +3,4 @@ services:
   bot: 
     build: ./
     command: [sh, -c, "python bot.py"]
+    restart: always
