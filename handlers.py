@@ -17,7 +17,10 @@ async def language(message: Message, dialog_manager: DialogManager):
     if is_user_subscribed(CHANNELS_FOR_SUB, message.from_user.id):
         await dialog_manager.start(DialogState.start)
     else:
-        await message.answer('Необходимо подписаться на канал')
+        text = "Перед тем, как использовать бота, пожалуйста, подпишись на один из наших каналов:"
+        text += "\n".join([ch for ch in CHANNELS_FOR_SUB])
+        await message.answer(text)
+
 
 @dp.message_handler(state=PostDialogState.select_min_salary)
 async def select_min_salary(message: Message, state: FSMContext):

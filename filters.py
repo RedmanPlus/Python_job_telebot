@@ -13,7 +13,7 @@ def is_button_selected(key: str = None):
     return wrapper
 
 async def is_user_subscribed(channel_ids: list, user_id: int, many=False):
-    return True
+    #return True
     #всё что ниже сможет исполняться только при добавлении бота в администраторы канала
     from loader import bot
     if not many:
