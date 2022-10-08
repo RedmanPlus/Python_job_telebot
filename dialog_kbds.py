@@ -60,7 +60,7 @@ async def switch_to_lvl(c: CallbackQuery, b: Button, d: DialogManager):
     dialog_data = d.data['aiogd_context'].widget_data['m_tech']
     await c.message.delete()
     if dialog_data:
-        await c.message.answer(f"Вы выбрали следующие технологии: {', '.join(dialog_data)}")
+        await c.message.answer(f"Ты выбрал следующие технологии: {', '.join(dialog_data)}")
     await d.switch_to(DialogState.select_lvl)
 
 async def switch_to_remote(c: CallbackQuery, b: Button, d: DialogManager):
@@ -68,7 +68,7 @@ async def switch_to_remote(c: CallbackQuery, b: Button, d: DialogManager):
         dialog_data = d.data['aiogd_context'].widget_data['r_lvl']
         await c.message.delete()
         if dialog_data:
-            await c.message.answer(f"Вы выбрали следующий уровень: {dialog_data}")
+            await c.message.answer(f"Ты выбрал следующий уровень: {dialog_data}")
     else:
         await d.data['state'].update_data({'channel_id': 'itjobs_nocode'})
         d.data['aiogd_context'].widget_data['no_code'] = True
