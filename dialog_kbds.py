@@ -143,7 +143,9 @@ technology_keyboard = Window(Const("Выбери технологии:"),
                              Button(continue_button,
                                     on_click=switch_to_lvl,
                                     id='continue'),
-                             cancel_button,
+                             Group(Button(Const("⬅ Назад"), id='back', on_click=reset), 
+                                   cancel_button,
+                                   width=2),
                              getter=get_technology,
                              state=DialogState.select_technology)
 
