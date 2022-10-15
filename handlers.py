@@ -1,11 +1,26 @@
-from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
+from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text, Command
 from aiogram_dialog import DialogManager
-from loader import dp
+from loader import dp, bot
 from states import DialogState, PostDialogState, SearchVacancyState
 from config import CHANNELS_FOR_SUB
 from filters import is_user_subscribed
+
+@dp.callback_query_handler(lambda c: c.data.startswith('check'))
+async def answer_callback(query: CallbackQuery, dialog_manager: DialogManager):
+    print(query.data)
+    if await is_user_subscribed(CHANNELS_FOR_SUB, query.from_user.id):
+        await dialog_manager.start(DialogState.start)
+    else:
+        text = "Перед тем, как использовать бота, пожалуйста, подпишись на один из наших каналов:\n"
+        inline_kbd = InlineKeyboardMarkup(row_width=1)
+        [inline_kbd.add(InlineKeyboardButton(text=f"{(await bot.get_chat(channel))['title']}", url=f"https://t.me/{channel[1:]}")) 
+    					for channel in CHANNELS_FOR_SUB]
+        inline_kbd.add(InlineKeyboardButton(text="✅Я подписался", callback_data='check_sub'))
+        await query.message.delete()
+        await query.message.answer(text, reply_markup=inline_kbd)
+
 
 @dp.message_handler(commands=['start', 'help'])
 async def start(message: Message, state: FSMContext):
@@ -14,12 +29,15 @@ async def start(message: Message, state: FSMContext):
 
 @dp.message_handler(commands=['stack'], state=None)
 async def language(message: Message, dialog_manager: DialogManager):
-    if is_user_subscribed(CHANNELS_FOR_SUB, message.from_user.id):
+    if await is_user_subscribed(CHANNELS_FOR_SUB, message.from_user.id):
         await dialog_manager.start(DialogState.start)
     else:
-        text = "Перед тем, как использовать бота, пожалуйста, подпишись на один из наших каналов:"
-        text += "\n".join([ch for ch in CHANNELS_FOR_SUB])
-        await message.answer(text)
+        text = "Перед тем, как использовать бота, пожалуйста, подпишись на один из наших каналов:\n"
+        inline_kbd = InlineKeyboardMarkup(row_width=1)
+        [inline_kbd.add(InlineKeyboardButton(text=f"{(await bot.get_chat(channel))['title']}", url=f"https://t.me/{channel[1:]}")) 
+						for channel in CHANNELS_FOR_SUB]
+        inline_kbd.add(InlineKeyboardButton(text="✅Я подписался", callback_data='check_sub'))
+        await message.answer(text, reply_markup=inline_kbd)
 
 
 @dp.message_handler(state=PostDialogState.select_min_salary)
