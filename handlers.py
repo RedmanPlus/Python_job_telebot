@@ -11,6 +11,7 @@ from filters import is_user_subscribed
 async def answer_callback(query: CallbackQuery, dialog_manager: DialogManager):
     print(query.data)
     if await is_user_subscribed(CHANNELS_FOR_SUB, query.from_user.id):
+        await query.answer("Благодарим за подписку!")
         await dialog_manager.start(DialogState.start)
     else:
         text = "Перед тем, как использовать бота, пожалуйста, подпишись на один из наших каналов:\n"
