@@ -13,3 +13,11 @@ binary_keyboard = ReplyKeyboardMarkup(
 	],
 	resize_keyboard=True
 )
+
+confirm_keyboard = ReplyKeyboardMarkup(
+	keyboard=[
+		[KeyboardButton(text="✅Подтвердить рассылку"),
+		 KeyboardButton(text="❌Отменить")]
+	],
+	resize_keyboard=True, one_time_keyboard=True
+)

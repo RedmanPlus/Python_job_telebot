@@ -1,15 +1,24 @@
-from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text, Command
-from aiogram_dialog import DialogManager
+from aiogram_dialog import DialogManager, StartMode
+from db.models import User
 from loader import dp, bot
 from states import DialogState, PostDialogState, SearchVacancyState
 from config import CHANNELS_FOR_SUB
 from filters import is_user_subscribed
 
+@dp.message_handler(Command('contacts'))
+async def send_contact(message: Message):
+    await message.answer("""<strong>Каналы с вакансиями:</strong> <a href="https://t.me/best_ITjob?utm_source=devseye_bot">ITJOBS</a>
+<strong>По вопросам рекламы:</strong> <a href="https://t.me/chri_grafova">Christina Grafova</a>
+<strong>По вопросам сотрудничества:</strong> <a href="https://t.me/egormk">egormk</a>
+<strong>Разработчики:</strong>
+<a href="https://t.me/arseny_chebyshev">Арсений Чебышев</a>
+<a href="https://t.me/redman_plus">Антон Румянцев</a>""")
+
 @dp.callback_query_handler(lambda c: c.data.startswith('check'))
 async def answer_callback(query: CallbackQuery, dialog_manager: DialogManager):
-    print(query.data)
     if await is_user_subscribed(CHANNELS_FOR_SUB, query.from_user.id):
         await query.answer("Благодарим за подписку!")
         await dialog_manager.start(DialogState.start)
@@ -22,11 +31,27 @@ async def answer_callback(query: CallbackQuery, dialog_manager: DialogManager):
         await query.message.delete()
         await query.message.answer(text, reply_markup=inline_kbd)
 
-
 @dp.message_handler(commands=['start', 'help'])
 async def start(message: Message, state: FSMContext):
-    await message.answer("""Привет👋! Я помогаю найти работу разработчикам ПО. 
+    user_dict = {k: v for k ,v in dict(message.from_user).items() 
+	             if k in [field.name for field in User._meta.get_fields()]}
+    user = User.objects.filter(id=user_dict['id']).first()
+    if not user:
+        user = User.objects.create(**user_dict)
+    await message.answer(f"""Привет, {user.first_name}👋! Я помогаю найти работу разработчикам ПО. 
 Пройди опрос по команде /stack и я пришлю подходящие вакансии""")
+    
+
+@dp.message_handler(commands=['app'])
+async def open_webapp(message: Message):
+	await message.answer(
+        "Нажми на кнопку, чтобы открыть приложение:",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text="Открыть", web_app=WebAppInfo(url=f"https://devseye.ru"))]
+				]
+        ),
+    )
 
 @dp.message_handler(commands=['stack'], state=None)
 async def language(message: Message, dialog_manager: DialogManager):
@@ -72,7 +97,7 @@ async def select_location(message: Message, state: FSMContext):
 			case 'max_salary_currency':
 				msg += f"Валюта заработной платы: {v}" + "\n"
 			case 'salary_above':
-				msg += f"Зарплата от: {v}" + "\n"
+				msg += f'{f"Зарплата от: {v}" if int(v) > 0 else ""}' + "\n"
 			case 'location':
 				msg += f"Локация: {v}" + "\n"	
 	
@@ -84,12 +109,7 @@ async def select_location(message: Message, state: FSMContext):
 async def list_vacancy(message: Message, state: FSMContext, dialog_manager: DialogManager):
 	await dialog_manager.start(SearchVacancyState.searching_vacancy)
 
+
 @dp.message_handler(Command('find'), state=None)
 async def send_to_stack_filling(message: Message):
 	await message.answer("Пройди опрос по команде /stack")
-
-@dp.message_handler(Command('contacts'))
-async def send_contact(message: Message):
-    await message.answer("""<strong>Разработчики:</strong>
-<a href="https://t.me/arseny_chebyshev">Арсений Чебышев</a>
-<a href="https://t.me/redman_plus">Антон Румянцев</a>""")

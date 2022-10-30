@@ -1,6 +1,20 @@
 version: '3'
 services:
+  devseye-bot-db:
+    image: postgres:12.0-alpine
+    volumes:
+      - devseye_bot_postgres_data:/var/lib/postgresql/data/
+    environment:
+      # https://www.postgresql.org/docs/current/libpq-envars.html, подгружаются из .env
+      - POSTGRES_USER=$DB_USER
+      - POSTGRES_PASSWORD=$DB_PASSWORD
+      - POSTGRES_DB=$DB_NAME
   bot: 
     build: ./
-    command: [sh, -c, "python bot.py"]
+    command: [sh, -c, "python manage.py makemigrations &&
+                       python manage.py migrate &&
+                       python bot.py"]
     restart: always
+  
+volumes:
+    devseye_bot_postgres_data:

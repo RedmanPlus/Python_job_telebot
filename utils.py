@@ -1,8 +1,10 @@
+import traceback
 import requests
 from aiogram.types import CallbackQuery
 from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd import Button
 from serializers import Vacancy
+from db.models import User
 
 def get_vacancies_json(params: dict):
     response = requests.get("https://devseye.ru/api/vacancy", params=params)
@@ -28,7 +30,7 @@ def get_vacancy_message_text(params: dict) -> list:
 {vacancy.tasks}
 <strong>Требования:</strong> 
 {vacancy.requirements}
-<strong>Ссылка:</strong> https://t.me/{vacancy.channel}/{vacancy.message_id}
+<strong>Ссылка:</strong> https://t.me/{vacancy.channel}/{vacancy.message_id}?utm_source=devseye_bot
 """ 
     for vacancy in vacancies]
     return return_lst
@@ -39,3 +41,11 @@ async def cancel(c: CallbackQuery, b: Button, d: DialogManager):
     await d.mark_closed()
     await d.data['state'].reset_state(with_data=True)
     
+async def send_mailing(bot, text: str):
+    users = User.objects.filter(is_admin=False)
+    async for user in users:
+        try:
+            await bot.send_message(user.id, text)
+        except:
+            traceback.print_exc()
+

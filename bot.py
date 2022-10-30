@@ -10,5 +10,6 @@ async def close(dp):
 
 if __name__ == '__main__':
 	from handlers import dp
+	from admin_handlers import dp
 	logging.basicConfig(level=logging.DEBUG)
 	executor.start_polling(dp, on_shutdown=close)
