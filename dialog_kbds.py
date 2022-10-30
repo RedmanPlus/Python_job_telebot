@@ -321,7 +321,7 @@ async def get_users(**kwargs):
     stat = User.get_summary()
     return {"stat": stat}
 
-user_stat = Window(Format("Общее пользователей бота: {stat}"),
+user_stat = Window(Format("Общее количество пользователей бота: {stat}"),
                    default_nav,
                    getter=get_users,
                    state=AdminDialog.stat)
