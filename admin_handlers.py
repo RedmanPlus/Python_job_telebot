@@ -6,7 +6,6 @@ from db.models import User
 from loader import dp, bot
 from keyboard import confirm_keyboard
 from states import AdminState, DialogState, PostDialogState, SearchVacancyState, AdminDialog
-from config import CHANNELS_FOR_SUB
 from filters import is_user_subscribed
 
 @dp.message_handler(commands=['admin'])
